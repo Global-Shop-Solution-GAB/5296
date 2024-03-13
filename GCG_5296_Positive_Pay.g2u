@@ -1,0 +1,197 @@
+Program.Sub.ScreenSU.Start
+Gui.Form..Create
+Gui.Form..Caption("Positive Pay Export")
+Gui.Form..Size(4905,2580)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..BackColor(-2147483633)
+Gui.Form..MousePointer(0)
+Gui.Form..Sizeable(False)
+Gui.Form..Event(Drop,Unload)
+Gui.Form.dtpBegDate.Create(DatePicker)
+Gui.Form.dtpBegDate.Size(1665,285)
+Gui.Form.dtpBegDate.Position(225,690)
+Gui.Form.lblBegDate.Create(Label,"Beginning Date",True,1935,255,0,195,375,True,0,"Arial",8,-2147483633,0)
+Gui.Form.dtpEndingDate.Create(DatePicker)
+Gui.Form.dtpEndingDate.Size(1650,285)
+Gui.Form.dtpEndingDate.Position(2685,705)
+Gui.Form.lblEndingDate.Create(Label,"Ending Date",True,1935,255,0,2640,390,True,0,"Arial",8,-2147483633,0)
+Gui.Form.cmdCreate.Create(Button)
+Gui.Form.cmdCreate.Size(990,465)
+Gui.Form.cmdCreate.Position(255,1245)
+Gui.Form.cmdCreate.Caption("Create")
+Gui.Form.cmdCreate.Event(Click,GetData)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'This project will be similar to all positive pay project with the only difference being the file layout that is generated. 
+'In this project the File CSV Spec and Template.xlsx 
+'will be used to generate the Positive Pay file. The csv file version will be used for the Fifth Third Bank. 
+
+
+
+'open connection to the database
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+'display the form
+gui.Form..Visible(true)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_5296_Positive_Pay.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+F.Intrinsic.Control.SetErrorHandler("Unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+gui.Form..Visible(false)
+
+F.ODBC.Connection!conx.Close
+
+'closes the program
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_5296_Positive_Pay.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.End
+
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Unload.End
+
+Program.Sub.GetData.Start
+F.Intrinsic.Control.SetErrorHandler("GetData_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.ssql.Declare(String)
+V.Local.dbdate.Declare(Date)
+V.Local.dedate.Declare(Date)
+V.Local.i.Declare(Long)
+v.Local.itotalchecks.Declare(long)
+v.Local.ftotal.Declare(float)
+v.Local.scsv.Declare(string)
+v.Local.sfilename.Declare(string)
+v.Local.sRoute.Declare(String)
+v.Local.sAcct.Declare(String)
+v.Local.sCheck.Declare(String)
+v.Local.sCust.Declare(String)
+'set the begging and ending dates
+V.Local.dbdate.Set(V.Screen.Form!dtpBegDate.Value)
+V.Local.dedate.Set(V.Screen.Form!dtpEndingDate.Value)
+
+'hide form
+gui.Form..Visible(false)
+
+'invoke wait dialog
+f.Intrinsic.UI.InvokeWaitDialog("Generating CSV File...")
+
+'file layout
+'Record Type, Routing Number, Account, CHeck Number, Date, Amount, Payee, Additional Data
+
+'Function.Intrinsic.Debug.InvokeDebugger
+'Function.Intrinsic.Debug.Stop
+
+'get and set check date, payee, amount of check and check number
+F.Intrinsic.String.Build("select V_CHECKS_LOG.CK_OR_VOID, V_CHECKS_LOG.ACCT_NO, V_CHECKS_LOG.CK_NO, V_CHECKS_LOG.CK_DATE, V_CHECKS_LOG.AMOUNT, V_VENDOR_MASTER.NAME_VENDOR AS PAYEE, V_CHECKS_LOG.VEND_NO from V_CHECKS_LOG inner join V_VENDOR_MASTER on V_CHECKS_LOG.VEND_NO = V_VENDOR_MASTER.VENDOR where V_CHECKS_LOG.CK_DATE between '{0}' and '{1}' and V_CHECKS_LOG.CK_NO NOT LIKE '{2}%' order by V_CHECKS_LOG.CK_NO desc",V.Local.dbdate.PervasiveDate,V.Local.dedate.PervasiveDate,"A",V.Local.ssql)
+'F.Intrinsic.String.Build("select V_CHECKS_LOG.CK_OR_VOID, V_CHECKS_LOG.ACCT_NO, V_CHECKS_LOG.CK_NO, V_CHECKS_LOG.CK_DATE, V_CHECKS_LOG.AMOUNT, V_VENDOR_MASTER.NAME_VENDOR AS PAYEE, V_CHECKS_LOG.VEND_NO from V_CHECKS_LOG inner join V_VENDOR_MASTER on V_CHECKS_LOG.VEND_NO = V_VENDOR_MASTER.VENDOR where V_CHECKS_LOG.CK_DATE between '{0}' and '{1}'",V.Local.dbdate.PervasiveDate,V.Local.dedate.PervasiveDate,V.Local.ssql)
+f.Data.DataTable.CreateFromSQL("PP","conx",v.Local.ssql)
+F.Data.Dictionary.Create("CheckVoid")
+F.Data.Dictionary.AddItem("CheckVoid","C","I")
+F.Data.Dictionary.AddItem("CheckVoid","V","V")
+F.Data.DataTable.FillFromDictionary("PP","CheckVoid","CK_OR_VOID", "CK_OR_VOID")
+
+
+'v.Local.sRoute.Set("")
+'v.Local.sAcct.Set("")
+'loop through data table and format
+'F.Intrinsic.Control.For(v.Local.i,0,v.dataTable.PP.RowCount--,1)
+F.Intrinsic.Control.For(v.Local.i,v.dataTable.PP.RowCount--,0,-1)
+'	f.Intrinsic.Control.If(v.Local.ftotal,>,0)
+'		f.Intrinsic.Math.Add(v.Local.ftotal,v.DataTable.PP(v.Local.i).AMOUNT.fieldvaltrim,v.Local.ftotal)
+'	f.Intrinsic.Control.Else
+'		v.Local.ftotal.Set(v.DataTable.PP(v.Local.i).AMOUNT.fieldvaltrim)
+'	f.Intrinsic.Control.EndIf
+	'excluding checks where the checknumber is less than 6 digits long
+	v.Local.sCheck.Set(v.DataTable.PP(v.Local.i).CK_NO!FIELDVALSTRING)
+	f.Intrinsic.Control.IF(V.Local.sCheck.Length,<,5)
+		F.Data.DataTable.DeleteRow("PP",V.Local.i)
+	f.Intrinsic.Control.Else
+		f.Intrinsic.String.Replace(v.DataTable.PP(v.Local.i).PAYEE.fieldvaltrim,","," ",v.Local.sCust)
+		'check to see if this is the first time around or if we need to write a new line
+		f.Intrinsic.Control.If(v.Local.i,>=,0)
+'			f.Intrinsic.String.Build("{0},{1},{2},{3},{4},{5},{6},{7}",v.DataTable.PP(v.Local.i).CK_OR_VOID.fieldvaltrim,v.Local.sRoute,v.Local.sAcct,v.DataTable.PP(v.Local.i).CK_NO.fieldvaltrim,v.DataTable.PP(v.Local.i).CK_DATE.fieldvaltrim,v.DataTable.PP(v.Local.i).AMOUNT.fieldvaltrim,v.Local.sCust,v.DataTable.PP(v.Local.i).ADDITIONAL.fieldvaltrim,v.Local.scsv)
+'		f.Intrinsic.Control.Else
+			f.Intrinsic.String.Build("{0}{1}{2},{3},{4},{5},{6},{7},{8}",v.Local.scsv,v.Ambient.NewLine,v.DataTable.PP(v.Local.i).CK_OR_VOID.fieldvaltrim,v.Local.sRoute,v.Local.sAcct,v.DataTable.PP(v.Local.i).CK_NO.fieldvaltrim,v.DataTable.PP(v.Local.i).CK_DATE.fieldvaltrim,v.DataTable.PP(v.Local.i).AMOUNT.fieldvaltrim,v.Local.sCust,v.Local.scsv)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.Next(v.Local.i)
+f.Data.DataTable.acceptchanges("PP")
+
+
+f.Data.DataTable.Compute("PP","SUM(AMOUNT)","",V.Local.ftotal)
+
+v.Local.itotalchecks.Set(v.DataTable.PP.RowCount)
+
+'build the final output
+f.Intrinsic.String.Build("{0}{1}{2},,{3},,{4},{5}",v.Local.scsv,v.Ambient.NewLine,"T",v.Local.itotalchecks,v.Ambient.Date,v.Local.ftotal,v.Local.scsv)
+
+f.Intrinsic.UI.CloseWaitDialog
+
+'open the save dialog
+f.Intrinsic.UI.ShowSaveFileDialog("","*.csv",v.Local.sfilename)
+
+f.Intrinsic.String.Build("{0}{1}",v.Local.sfilename,".csv",v.Local.sfilename)
+
+f.Intrinsic.Control.If(v.Local.sfilename,<>,"***CANCEL***")
+	f.Intrinsic.File.String2File(v.Local.sfilename,v.Local.scsv)
+f.Intrinsic.Control.Else
+	'inform the user it didn't create the file
+	f.Intrinsic.UI.Msgbox("Positive Pay File Not Created")
+	f.Intrinsic.Control.CallSub(unload)
+f.Intrinsic.Control.EndIf
+
+'inform user and close the program
+f.Intrinsic.UI.Msgbox("Positive Pay File Created")
+
+f.Intrinsic.Control.CallSub(unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("GetData_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_5296_Positive_Pay.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.GetData.End
+
+Program.Sub.Comments.Start
+${$0$}$$}$WAW$}$4/26/2017 9:24:43 AM$}$True
+Program.Sub.Comments.End
